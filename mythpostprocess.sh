@@ -1,30 +1,59 @@
-#!/bin/bash
-# mythpostprocess.sh written by Justin Decker, copyright 2015. For licensing purposes, use GPLv2
-#
-# This script does four things:
-# - Flags and removes commercials from the recording.
-# - Transcodes video to h264 but retains the original audio (if you use an HDHomeRun
-#   like I do, then that will probably be AC3 and doesn't need transcoding.)
-# - Adjusts the database with the new stream name/info.
-# - Creates a symlink with a pretty name to a different folder and prunes any broken
-#   links and empty dirs as well as no longer needed video files (to keep up with MythTV's auto expiration system.)
-#
-# To use, create as a job that looks like this: /path/to/script/mythpostprocess.sh "%CHANID%" "%STARTTIMEUTC%"
+#!/bin/bash                                                                                                         #
+# mythpostprocess.sh written by Justin Decker, copyright 2015. For licensing purposes, use GPLv2                    #
+#                                                                                                                   #
+# Minor changes by Samuel Walters-Nevet                                                                             #
+#    FFMpeg comments modified from:                                                                                 #
+#       ArchWiki ( https://wiki.archlinux.org/index.php/FFmpeg )                                                    #
+#       FFMpeg docs ( https://trac.ffmpeg.org/wiki/Encode/H.264 )                                                   #
+#                                                                                                                   #
+# This script does four things:                                                                                     #
+# - Flags and removes commercials from the recording.                                                               #
+# - Transcodes video to h264 but retains the original audio (if you use an HDHomeRun                                #
+#   like I do, then that will probably be AC3 and doesn't need transcoding.)                                        #
+# - Adjusts the database with the new stream name/info.                                                             #
+# - Creates a symlink with a pretty name to a different folder and prunes any broken                                #
+#   links and empty dirs as well as no longer needed video files (to keep up with MythTV's auto expiration system.) #
+#                                                                                                                   #
+# To use, create as a job that looks like this:                                                                     #
+#       /path/to/script/mythpostprocess.sh "%CHANID%" "%STARTTIMEUTC%"                                              #
+#####################################################################################################################
 
 # The following values adjust the script parameters:
 #
 # Set this to where the pretty links should reside, making sure to include the trailing /.
 PRETTYDIRNAME="/storage/htpc/recordedtv/"
 # Set this to the URL prefix of your Plex Media Server. Only needed if you want to notify Plex to refresh the library.
-PMSURL="http://192.168.1.200:32400/"
-# Set this to the section number of your recorded TV shows library. To find this out, go to your plex media server and navigate to the desired library. Look at the URL for that page, and at the end you should see /section/<number>. The number here is your section number.
-PMSSEC="8"
+PMSURL="http://localhost:32400/"
+# Set this to the section number of your recorded TV shows library.
+#   To find this out, go to your plex media server and navigate to the desired library. Look at the URL for that page, and at the end you should see:
+#   /section/<number>
+#   The number here is your section number.
+PMSSEC="2"
+
+
+#########################
+# FFmpeg Configuration: #
+#########################
 # Number of threads to use for encoding. 0 uses all.
 THREADS=0
-# Set the libx264 CRF value. Higher value is lower video quality but smaller file size, min 0 max 51. In my experience, 30 is reasonable. See ffmpeg manual.
-CRF=30
-# libx264 preset. See ffmpeg manual for other options. I set this to ultrafast because it runs under one among many of my hypervisors on this machine, and I'm aiming to code 2 seconds of video per real-time second. You may prefer normal if you aren't doing this and/or have a faster CPU.
-PRESET="ultrafast"
+
+# Used when you want a specific quality output.
+#   General usage is to use the highest -crf value that still provides an acceptable quality.
+#   Lower values are higher quality; 0 is lossless, 18 is visually lossless, and 23 is the default value.
+#   A sane range is between 18 and 28.
+CRF=22
+
+# libx264 preset. Options are:  "ultrafast", "superfast", "veryfast", "faster", "fast", "medium", "slow", "slower", and "veryslow"
+#   A preset is a collection of options that will provide a certain encoding speed to compression ratio.
+#   A slower preset will provide better compression. This means that, for example, if you target a certain file size or constant bit rate, you will achieve better quality with a slower preset.
+#   Similarly, for constant quality encoding, you will simply save bitrate by choosing a slower preset.
+#   Use the slowest -preset you have patience for
+PRESET="medium"
+#################################
+#  End of FFmpeg Configuration  #
+#################################
+
+
 # Set this to the location of the mythtv config.xml file. It's needed to determine the mysql login. If you're running mythbuntu, you shouldn't need to change this.
 CONFIGXML="/home/mythtv/.mythtv/config.xml"
 
